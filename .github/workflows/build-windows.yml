@@ -1,4 +1,4 @@
-name: Build Node binaries for Windows
+name: Build Node binaries for Windows x86
 
 on:
   workflow_dispatch:
@@ -11,8 +11,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target-node: [14, 16, 18, 19]
-        target-arch: [x64, arm64]
+        target-node: [18]
+        target-arch: [x86]
 
     steps:
       - uses: actions/checkout@v2
