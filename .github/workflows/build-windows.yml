@@ -5,8 +5,8 @@ on:
   workflow_call:
 
 jobs:
-  windows-vs2019:
-    runs-on: windows-2019
+  windows-build:
+    runs-on: windows-2022  # 替换弃用的 windows-2019
 
     strategy:
       fail-fast: false
@@ -15,26 +15,31 @@ jobs:
         target-arch: [x86]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4  # 升级到最新版
 
-      - name: Use Node.js 14
-        uses: actions/setup-node@v1
+      - name: Use Node.js 14 (for building)
+        uses: actions/setup-node@v4  # 升级到最新版
         with:
           node-version: 14
+          architecture: x64  # 构建工具建议用64位
 
       - run: yarn install
 
-      - run: choco install nasm
+      - run: choco install nasm -y  # 添加 -y 避免交互确认
 
-      - run: yarn start --node-range node${{ matrix.target-node }} --arch ${{ matrix.target-arch }} --output dist
+      - name: Build Node binary
+        run: yarn start --node-range node${{ matrix.target-node }} --arch ${{ matrix.target-arch }} --output dist
 
-      - name: Check if binary is compiled
-        id: check_file
+      - name: Verify binary
+        id: verify_binary
         run: |
-          if (Test-Path -Path dist\\*.sha256sum -PathType Leaf) { echo "::set-output name=EXISTS::true" } else { echo "::set-output name=EXISTS::false" }
+          $fileExists = Test-Path -Path dist\\*.sha256sum -PathType Leaf
+          echo "exists=$fileExists" >> $GITHUB_OUTPUT
+          if (-not $fileExists) { exit 1 }
 
-      - uses: actions/upload-artifact@v2
-        if: steps.check_file.outputs.EXISTS == 'true'
+      - uses: actions/upload-artifact@v4  # 升级到最新版
+        if: steps.verify_binary.outputs.exists == 'true'
         with:
-          name: node${{ matrix.target-node }}-windows-${{ matrix.target-arch }}
-          path: dist\\*
+          name: node${{ matrix.target-node }}-windows-${{ matrix.target_arch }}
+          path: dist/*
+          retention-days: 7  # 可选：设置artifact保留时间
